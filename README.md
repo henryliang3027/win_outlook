@@ -1,6 +1,6 @@
 # win_outlook
 
-A new Flutter plugin project.
+This is a Flutter plugin that can open the Windows Outlook application with attached files, a subject, body text, and recipients.
 
 ## Getting Started
 
