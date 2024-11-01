@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:win_outlook/email_status.dart';
 import 'package:win_outlook/win_outlook.dart';
 
 void main() {
@@ -50,16 +51,15 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     void sendEmail() async {
-      String result = await _winOutlookPlugin.openEmail(
-            recipient: 'Henry.Liang@twoway.com.tw',
-            subject: 'Hello from Flutter',
-            body: 'Please find the attachment.',
-            attachmentPath:
-                'C:/Users/henry.liang/Documents/ACI+/log_2024_08_07_12_05_39.xlsx',
-          ) ??
-          'failed';
+      final EmailStatus result = await _winOutlookPlugin.openEmail(
+        recipient: 'Henry.Liang@twoway.com.tw',
+        subject: 'Hello from Flutter',
+        body: 'Please find the attachment請開郵件ㄒ哈哈.',
+        attachmentPath:
+            'C:/Users/henry.liang/Documents/ACI+/log_2024_08_07_12_04_49.xlsx',
+      );
 
-      print(result);
+      print('${result.isSuccessful}, ${result.message}');
     }
 
     return MaterialApp(

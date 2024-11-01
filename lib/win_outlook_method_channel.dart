@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:win_outlook/email_status.dart';
 
 import 'win_outlook_platform_interface.dart';
 
@@ -17,18 +20,43 @@ class MethodChannelWinOutlook extends WinOutlookPlatform {
   }
 
   @override
-  Future<String?> openEmail({
+  Future<EmailStatus> openEmail({
     required String subject,
     required String body,
     required String attachmentPath,
     String recipient = '',
   }) async {
-    final result = await methodChannel.invokeMethod<String>('openEmail', {
-      'recipient': recipient,
-      'subject': subject,
-      'body': body,
-      'attachmentPath': attachmentPath,
-    });
-    return result;
+    try {
+      final Map<dynamic, dynamic>? result =
+          await methodChannel.invokeMethod<Map<dynamic, dynamic>>('openEmail', {
+        'recipient': recipient,
+        'subject': subject,
+        'body': body,
+        'attachmentPath': attachmentPath,
+      });
+
+      if (result != null) {
+        return EmailStatus.fromMap(result);
+      } else {
+        return EmailStatus(
+          isSuccessful: false,
+          message: "invoked openEmail with no response",
+        );
+      }
+    } catch (e) {
+      // Handle PlatformException specifically and other exceptions
+      if (e is PlatformException) {
+        return EmailStatus(
+          isSuccessful: false,
+          message: e.message ?? "Platform exception occurred",
+        );
+      } else {
+        // Handle unexpected exceptions
+        return EmailStatus(
+          isSuccessful: false,
+          message: "An unexpected error occurred: $e",
+        );
+      }
+    }
   }
 }

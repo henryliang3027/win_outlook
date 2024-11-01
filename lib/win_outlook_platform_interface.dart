@@ -1,4 +1,5 @@
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:win_outlook/email_status.dart';
 
 import 'win_outlook_method_channel.dart';
 
@@ -27,7 +28,7 @@ abstract class WinOutlookPlatform extends PlatformInterface {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
 
-  Future<String?> openEmail({
+  Future<EmailStatus> openEmail({
     required String subject,
     required String body,
     required String attachmentPath,

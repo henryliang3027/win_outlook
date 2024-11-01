@@ -12,71 +12,122 @@
 
 #include <memory>
 #include <sstream>
+#include <filesystem>
 #include <MAPI.h>
 
 #pragma comment(lib, "MAPI32.lib")
 namespace win_outlook
 {
+  class EmailStatus
+  {
+  public:
+    bool isSuccessful;
+    std::string message;
 
-  void OpenEmailWithAttachment(const std::string &recipient,
-                               const std::string &subject,
-                               const std::string &body,
-                               const std::string &attachmentPath)
+    // Convert EmailStatus to flutter::EncodableMap
+    flutter::EncodableValue toEncodableValue() const
+    {
+      flutter::EncodableMap map;
+      map[flutter::EncodableValue("isSuccessful")] = flutter::EncodableValue(isSuccessful);
+      map[flutter::EncodableValue("message")] = flutter::EncodableValue(message);
+      return flutter::EncodableValue(map);
+    }
+  };
+
+  PWSTR ConvertStringToPWSTR(const std::string &str)
   {
 
-    LPSTR lpstrRecipient = new char[recipient.size() + 1];
-    strcpy_s(lpstrRecipient, recipient.size() + 1, recipient.c_str());
+    // Step 1: Calculate the required size for the wide character buffer
+    int wstr_size = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, nullptr, 0);
 
-    LPSTR lpstrAttachmentPath = new char[attachmentPath.size() + 1];
-    strcpy_s(lpstrAttachmentPath, attachmentPath.size() + 1, attachmentPath.c_str());
+    // Step 2: Allocate memory for PWSTR
+    PWSTR pwstr = new wchar_t[wstr_size];
 
-    LPSTR lpstrSubject = new char[subject.size() + 1];
-    strcpy_s(lpstrSubject, subject.size() + 1, subject.c_str());
+    // Step 3: Perform the actual conversion
+    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, pwstr, wstr_size);
 
-    LPSTR lpstrBody = new char[body.size() + 1];
-    strcpy_s(lpstrBody, body.size() + 1, body.c_str());
+    return pwstr;
+  }
 
-    // Define the attachment
-    MapiFileDesc attachment = {};
-    attachment.nPosition = (ULONG)-1; // Attach at the end of the message
-    attachment.lpszPathName = lpstrAttachmentPath;
-    attachment.lpszFileName = ""; // Optional: the name to display in Outlook
+  std::string getFilenameWithExtension(const std::string &filepath)
+  {
+    return std::filesystem::path(filepath).filename().string();
+  }
+
+  EmailStatus OpenEmailWithAttachment(const std::string &recipient,
+                                      const std::string &subject,
+                                      const std::string &body,
+                                      const std::string &attachmentPath)
+  {
+    // Allocate strings
+    PWSTR pwstrRecipient = ConvertStringToPWSTR(recipient);
+    PWSTR pwstrAttachmentPath = ConvertStringToPWSTR(attachmentPath);
+    PWSTR pwstrSubject = ConvertStringToPWSTR(subject);
+    PWSTR pwstrBody = ConvertStringToPWSTR(body);
+
+    // Define the attachment structure
+    MapiFileDescW attachment = {};
+    attachment.nPosition = (ULONG)-1;              // Attach at the end of the message
+    attachment.lpszPathName = pwstrAttachmentPath; // File path of the attachment
+    std::string filename = getFilenameWithExtension(attachmentPath);
+    attachment.lpszFileName = ConvertStringToPWSTR(filename); // Display name of the attachment
+
+    // Define the recipient
+    MapiRecipDescW recipDesc = {};
+    recipDesc.ulRecipClass = MAPI_TO;
+    recipDesc.lpszName = pwstrRecipient;
+    recipDesc.lpszAddress = pwstrRecipient; // Mail address
 
     // Define the message
-    MapiMessage message = {};
-    message.lpszSubject = lpstrSubject;
-    message.lpszNoteText = lpstrBody;
+    MapiMessageW message = {};
+    message.lpszSubject = pwstrSubject;
+    message.lpszNoteText = pwstrBody;
+    message.nRecipCount = 1;
+    message.lpRecips = &recipDesc; // Set the recipient
+    message.nFileCount = 1;        // Number of files to attach
+    message.lpFiles = &attachment; // Pointer to the attachments
 
-    message.nFileCount = 1;
-    message.lpFiles = &attachment;
+    EmailStatus emailStatus;
 
-    if (!recipient.empty())
-    {
-
-      MapiRecipDesc recipDesc = {};
-      recipDesc.ulRecipClass = MAPI_TO;
-      recipDesc.lpszName = lpstrRecipient;
-      recipDesc.lpszAddress = ""; // Use "SMTP:" prefix for email address
-
-      message.nRecipCount = 1;
-      message.lpRecips = &recipDesc;
-    }
-
-    // Initialize MAPI
+    // Load MAPI and send email
     HINSTANCE hMapi = ::LoadLibraryA("MAPI32.DLL");
     if (hMapi)
     {
-      LPMAPISENDMAIL lpfnMAPISendMail = (LPMAPISENDMAIL)::GetProcAddress(hMapi, "MAPISendMail");
+      LPMAPISENDMAILW lpfnMAPISendMail = (LPMAPISENDMAILW)::GetProcAddress(hMapi, "MAPISendMailW");
       if (lpfnMAPISendMail)
       {
-        lpfnMAPISendMail(0, 0, &message, MAPI_DIALOG, 0);
+        HRESULT hr = lpfnMAPISendMail(0, 0, &message, MAPI_DIALOG, 0);
+        if (hr != S_OK)
+        {
+          emailStatus.isSuccessful = false;
+          emailStatus.message = "MAPISendMail failed with error: " + hr;
+        }
+        else
+        {
+          emailStatus.isSuccessful = true;
+          emailStatus.message = "Email sent successfully." + hr;
+        }
+      }
+      else
+      {
+        emailStatus.isSuccessful = false;
+        emailStatus.message = "Failed to get address of MAPISendMailW";
       }
       ::FreeLibrary(hMapi);
-      delete[] lpstrRecipient;
-      delete[] lpstrAttachmentPath;
-      delete[] lpstrSubject;
-      // delete[] lpstrBody;
     }
+    else
+    {
+      emailStatus.isSuccessful = false;
+      emailStatus.message = "Failed to load MAPI32.DLL";
+    }
+
+    // Clean up
+    delete[] pwstrRecipient;
+    delete[] pwstrAttachmentPath;
+    delete[] pwstrSubject;
+    delete[] pwstrBody;
+
+    return emailStatus;
   }
 
   // static
@@ -136,10 +187,11 @@ namespace win_outlook
         std::string subject = std::get<std::string>(args->at(flutter::EncodableValue("subject"))).c_str();
         std::string body = std::get<std::string>(args->at(flutter::EncodableValue("body"))).c_str();
         std::string attachmentPath = std::get<std::string>(args->at(flutter::EncodableValue("attachmentPath"))).c_str();
-        OpenEmailWithAttachment(recipient, subject, body, attachmentPath);
 
-        std::string mailto = "/m \"" + recipient + "?subject=" + subject + "&body=" + body + "\"";
-        result->Success(flutter::EncodableValue(mailto));
+        EmailStatus emailStatus = OpenEmailWithAttachment(recipient, subject, body, attachmentPath);
+
+        flutter::EncodableValue encodableStatus = emailStatus.toEncodableValue();
+        result->Success(encodableStatus);
       }
       else
       {
