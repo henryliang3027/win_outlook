@@ -12,7 +12,6 @@
 
 #include <memory>
 #include <sstream>
-#include <filesystem>
 #include <MAPI.h>
 
 #pragma comment(lib, "MAPI32.lib")
@@ -49,9 +48,19 @@ namespace win_outlook
     return pwstr;
   }
 
-  std::string getFilenameWithExtension(const std::string &filepath)
+  std::string getFilenameFromPath(const std::string &filepath)
   {
-    return std::filesystem::path(filepath).filename().string();
+    // Find the last occurrence of '/' and '\\'
+    size_t lastSlashPos = filepath.find_last_of("/\\");
+
+    // If no slash is found, the entire string is the filename
+    if (lastSlashPos == std::string::npos)
+    {
+      return filepath;
+    }
+
+    // Return the substring after the last slash
+    return filepath.substr(lastSlashPos + 1);
   }
 
   EmailStatus OpenEmailWithAttachment(const std::string &recipient,
@@ -69,7 +78,7 @@ namespace win_outlook
     MapiFileDescW attachment = {};
     attachment.nPosition = (ULONG)-1;              // Attach at the end of the message
     attachment.lpszPathName = pwstrAttachmentPath; // File path of the attachment
-    std::string filename = getFilenameWithExtension(attachmentPath);
+    std::string filename = getFilenameFromPath(attachmentPath);
     attachment.lpszFileName = ConvertStringToPWSTR(filename); // Display name of the attachment
 
     // Define the recipient
@@ -82,8 +91,12 @@ namespace win_outlook
     MapiMessageW message = {};
     message.lpszSubject = pwstrSubject;
     message.lpszNoteText = pwstrBody;
-    message.nRecipCount = 1;
-    message.lpRecips = &recipDesc; // Set the recipient
+    if (!recipient.empty())
+    {
+      message.nRecipCount = 1;
+      message.lpRecips = &recipDesc; // Set the recipient
+    }
+
     message.nFileCount = 1;        // Number of files to attach
     message.lpFiles = &attachment; // Pointer to the attachments
 

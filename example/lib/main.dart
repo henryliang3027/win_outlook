@@ -52,11 +52,11 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     void sendEmail() async {
       final EmailStatus result = await _winOutlookPlugin.openEmail(
-        recipient: 'Henry.Liang@twoway.com.tw',
+        recipient: '',
         subject: 'Hello from Flutter',
         body: 'Please find the attachment請開郵件ㄒ哈哈.',
         attachmentPath:
-            'C:/Users/henry.liang/Documents/ACI+/log_2024_08_07_12_04_49.xlsx',
+            'C:/Users/henry.liang/Documents/ACI+/QR_Code_202你為甚麼要這樣.png',
       );
 
       print('${result.isSuccessful}, ${result.message}');
