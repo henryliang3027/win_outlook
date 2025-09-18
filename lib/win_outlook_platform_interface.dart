@@ -24,10 +24,6 @@ abstract class WinOutlookPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<String?> getPlatformVersion() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
-  }
-
   Future<EmailStatus> openEmail({
     required String subject,
     required String body,

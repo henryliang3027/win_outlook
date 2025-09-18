@@ -3,10 +3,6 @@ import 'package:win_outlook/email_status.dart';
 import 'win_outlook_platform_interface.dart';
 
 class WinOutlook {
-  Future<String?> getPlatformVersion() {
-    return WinOutlookPlatform.instance.getPlatformVersion();
-  }
-
   Future<EmailStatus> openEmail({
     required String recipient,
     required String subject,

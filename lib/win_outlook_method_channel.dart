@@ -13,13 +13,6 @@ class MethodChannelWinOutlook extends WinOutlookPlatform {
   final methodChannel = const MethodChannel('win_outlook');
 
   @override
-  Future<String?> getPlatformVersion() async {
-    final version =
-        await methodChannel.invokeMethod<String>('getPlatformVersion');
-    return version;
-  }
-
-  @override
   Future<EmailStatus> openEmail({
     required String subject,
     required String body,

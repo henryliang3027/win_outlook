@@ -171,25 +171,7 @@ namespace win_outlook
       const flutter::MethodCall<flutter::EncodableValue> &method_call,
       std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result)
   {
-    if (method_call.method_name().compare("getPlatformVersion") == 0)
-    {
-      std::ostringstream version_stream;
-      version_stream << "Windows ";
-      if (IsWindows10OrGreater())
-      {
-        version_stream << "10+";
-      }
-      else if (IsWindows8OrGreater())
-      {
-        version_stream << "8";
-      }
-      else if (IsWindows7OrGreater())
-      {
-        version_stream << "7";
-      }
-      result->Success(flutter::EncodableValue(version_stream.str()));
-    }
-    else if (method_call.method_name().compare("openEmail") == 0)
+    if (method_call.method_name().compare("openEmail") == 0)
     {
 
       // Parse arguments and call the function
